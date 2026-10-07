@@ -12,17 +12,20 @@ services:
       - mongo_data:/data/db
     restart: unless-stopped
 
-  # Servidor de Integración Continua
+
+# Servidor de Integración Continua
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: jenkins.Dockerfile
     container_name: geo_jenkins
-    user: root # Necesario para ejecutar Docker dentro de Jenkins
+    user: root
     ports:
       - "8080:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock # Permite a Jenkins construir tus contenedores
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
 volumes:
