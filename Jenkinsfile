@@ -14,14 +14,14 @@ pipeline {
             }
         }
         
-        stage('Ingesta de Datos (Kaggle)') {
+       stage('Ingesta de Datos (Kaggle)') {
             steps {
-                // Inyectamos el Secret Text en la variable de entorno exacta que exige Kaggle
                 withCredentials([string(credentialsId: 'kaggle-token', variable: 'KAGGLE_API_TOKEN')]) {
                     sh '''
-                    echo "Descargando dataset de bicicletas desde Kaggle..."
+                    echo "Descargando dataset de US Accidents desde Kaggle..."
                     mkdir -p data/raw
-                    kaggle datasets download -d residentmario/new-york-city-bike-share-dataset -p data/raw --unzip
+                    # Usamos el dataset de accidentes recomendado en la rúbrica
+                    kaggle datasets download -d sobhanmoosavi/us-accidents -p data/raw --unzip
                     echo "¡Descarga exitosa!"
                     '''
                 }
