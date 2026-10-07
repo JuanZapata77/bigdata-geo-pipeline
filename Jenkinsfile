@@ -16,12 +16,11 @@ pipeline {
         
         stage('Ingesta de Datos (Kaggle)') {
             steps {
-                // Aquí extraemos tus credenciales ocultas con el ID exacto que creaste
-                withCredentials([usernamePassword(credentialsId: 'kaggle-credentials', passwordVariable: 'KAGGLE_KEY', usernameVariable: 'KAGGLE_USERNAME')]) {
+                // Inyectamos el Secret Text en la variable de entorno exacta que exige Kaggle
+                withCredentials([string(credentialsId: 'kaggle-token', variable: 'KAGGLE_API_TOKEN')]) {
                     sh '''
                     echo "Descargando dataset de bicicletas desde Kaggle..."
                     mkdir -p data/raw
-                    # Usamos un dataset popular de Citi Bike de NYC (puedes cambiar este ID luego)
                     kaggle datasets download -d residentmario/new-york-city-bike-share-dataset -p data/raw --unzip
                     echo "¡Descarga exitosa!"
                     '''
