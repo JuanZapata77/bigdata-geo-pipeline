@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Base de datos documental con soporte Geoespacial
+  mongodb:
+    image: mongo:6.0
+    container_name: geo_mongo
+    ports:
+      # El 27018 es tu compu local (para no chocar), el 27017 es el de adentro del contenedor
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  # Servidor de Integración Continua
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: geo_jenkins
+    user: root # Necesario para ejecutar Docker dentro de Jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock # Permite a Jenkins construir tus contenedores
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  jenkins_home:
