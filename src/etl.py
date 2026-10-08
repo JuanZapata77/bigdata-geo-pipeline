@@ -8,38 +8,40 @@ DB_NAME = "geo_db"
 COLLECTION_NAME = "accidents"
 
 def procesar_y_cargar(df_partition):
-    # Si la partición está vacía, saltamos
     if df_partition.empty:
         return pd.Series([0], dtype=int)
         
-    # flush=True obliga a Jenkins a imprimir esto inmediatamente en la consola
     print(f"-> Procesando un bloque de {len(df_partition)} accidentes...", flush=True)
     
     cliente = MongoClient(MONGO_URI)
     coleccion = cliente[DB_NAME][COLLECTION_NAME]
     
-    # 1. Limpieza vectorizada (mucho más rápida que un if por cada fila)
+    # 1. Filtramos las coordenadas vacías (obligatorias para el mapa)
     df_clean = df_partition.dropna(subset=['Start_Lat', 'Start_Lng'])
     
     if df_clean.empty:
         cliente.close()
         return pd.Series([0], dtype=int)
         
-    # 2. Función rápida para armar el GeoJSON
+    # Función auxiliar para convertir el <NA> de Pandas a None (null de MongoDB)
+    def get_val(val):
+        return None if pd.isna(val) else val
+        
+    # 2. Función para armar el GeoJSON limpiando los nulos en otros campos
     def armar_doc(fila):
         return {
-            "id_accidente": fila.get('ID'),
-            "severidad": fila.get('Severity'),
-            "ciudad": fila.get('City'),
-            "estado": fila.get('State'),
-            "fecha_inicio": fila.get('Start_Time'),
+            "id_accidente": get_val(fila.get('ID')),
+            "severidad": get_val(fila.get('Severity')),
+            "ciudad": get_val(fila.get('City')),
+            "estado": get_val(fila.get('State')),
+            "fecha_inicio": get_val(fila.get('Start_Time')),
             "location": {
                 "type": "Point",
                 "coordinates": [float(fila['Start_Lng']), float(fila['Start_Lat'])]
             }
         }
     
-    # 3. apply procesa los datos de forma optimizada en C por debajo
+    # 3. apply procesa los datos
     documentos = df_clean.apply(armar_doc, axis=1).tolist()
     
     # 4. Inserción masiva en Mongo
@@ -48,8 +50,6 @@ def procesar_y_cargar(df_partition):
         
     cliente.close()
     print(f"<- Bloque guardado exitosamente: {len(documentos)} documentos.", flush=True)
-    
-    # Retornamos una Serie de Pandas para evitar el FutureWarning de Dask
     return pd.Series([len(documentos)], dtype=int)
 
 if __name__ == "__main__":
@@ -59,7 +59,6 @@ if __name__ == "__main__":
     df = dd.read_csv(ruta_archivo, dtype=str, assume_missing=True)
     
     print("2. Transformando datos a GeoJSON y cargando a MongoDB...", flush=True)
-    # Ejecutamos el procesamiento distribuido. Pasamos una Serie en meta para cumplir el estándar.
     resultados = df.map_partitions(procesar_y_cargar, meta=pd.Series(dtype=int)).compute()
     
     total = resultados.sum()
