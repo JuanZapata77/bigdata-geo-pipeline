@@ -8,10 +8,10 @@ pipeline {
             }
         }
 
-        stage('Construir e Iniciar Infraestructura') {
+       stage('Construir e Iniciar Infraestructura') {
             steps {
                 echo 'Levantando los contenedores con Docker Compose...'
-                sh 'docker compose up -d --build'
+                sh 'docker-compose up -d --build' 
             }
         }
 
