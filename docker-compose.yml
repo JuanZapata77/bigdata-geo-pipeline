@@ -1,48 +1,85 @@
-version: '3.8'
-
 services:
-  # Base de datos documental con soporte Geoespacial
-  mongodb:
+  geo_mongo:
     image: mongo:6.0
     container_name: geo_mongo
     ports:
-      # El 27018 es tu compu local (para no chocar), el 27017 es el de adentro del contenedor
-      - "27018:27017"
-    volumes:
-      - mongo_data:/data/db
+      - "27017:27017"
     restart: unless-stopped
 
-
-# Servidor de Integración Continua
   jenkins:
     build:
       context: .
       dockerfile: jenkins.Dockerfile
-    container_name: geo_jenkins
+    container_name: jenkins
     user: root
+    privileged: true
     ports:
-      - "8080:8080"
+      - "8080:8080" 
       - "50000:50000"
     volumes:
-      - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_home:/var/jenkins_home
     restart: unless-stopped
 
-
-    # Capa de Consumo (API Rest)
   geo_api:
     build:
       context: .
       dockerfile: api.Dockerfile
     container_name: geo_api
     ports:
-      - "8000:8000"
+      - "8000:8000" 
     environment:
       - MONGO_URI=mongodb://geo_mongo:27017/
     depends_on:
-      - mongodb
+      - geo_mongo
+    restart: unless-stopped
+
+  dask_scheduler:
+    image: daskdev/dask:2024.1.0-py3.11
+    container_name: dask_scheduler
+    command: dask-scheduler
+    ports:
+      - "8786:8786" 
+      - "8787:8787" 
+    restart: unless-stopped
+
+  dask_worker_1:
+    image: daskdev/dask:2024.1.0-py3.11
+    container_name: dask_worker_1
+    command: dask-worker tcp://dask_scheduler:8786
+    depends_on:
+      - dask_scheduler
+    restart: unless-stopped
+
+  dask_worker_2:
+    image: daskdev/dask:2024.1.0-py3.11
+    container_name: dask_worker_2
+    command: dask-worker tcp://dask_scheduler:8786
+    depends_on:
+      - dask_scheduler
+    restart: unless-stopped
+
+  spark_master:
+    image: bitnami/spark:latest
+    container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077" 
+      - "8082:8080" 
+    restart: unless-stopped
+
+  spark_worker:
+    image: bitnami/spark:latest
+    container_name: spark_worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark_master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    depends_on:
+      - spark_master
     restart: unless-stopped
 
 volumes:
-  mongo_data:
   jenkins_home:
