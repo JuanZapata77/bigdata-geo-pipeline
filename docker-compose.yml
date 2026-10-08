@@ -28,6 +28,21 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
+
+    # Capa de Consumo (API Rest)
+  geo_api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    container_name: geo_api
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://geo_mongo:27017/
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
 volumes:
   mongo_data:
   jenkins_home:
