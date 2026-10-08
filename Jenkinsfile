@@ -1,43 +1,52 @@
 pipeline {
-    agent {
-        docker { 
-            image 'python:3.11-slim'
-            // Truco de DevOps: Conectamos este contenedor a la red de tus contenedores principales
-            args '-u root:root --network bigdata-geo-pipeline_default' 
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Construir e Iniciar Infraestructura') {
+            steps {
+                echo 'Levantando los contenedores con Docker Compose...'
+                sh 'docker compose up -d --build'
+            }
+        }
+
+        stage('Pruebas Automatizadas (Pytest)') {
+            steps {
+                echo 'Esperando que la API levante...'
+                sh 'sleep 10'
+                
+                echo 'Ejecutando pruebas con Pytest dentro del contenedor de la API...'
+                // Si esta prueba falla, Jenkins cancelará el pipeline aquí mismo
+                sh 'docker exec geo_api pytest /app/tests/'
+            }
+        }
+
+        stage('Ingesta y Limpieza (Dask)') {
+            steps {
+                echo 'Ejecutando el pipeline ETL con el clúster de Dask...'
+                sh 'docker exec geo_api python /app/src/etl.py'
+            }
+        }
+
+        stage('Analítica Geoespacial (Spark)') {
+            steps {
+                echo 'Ejecutando agrupaciones analíticas con el clúster de Spark...'
+                sh 'docker exec geo_api python /app/src/spark_agregaciones.py'
+            }
         }
     }
-    
-    stages {
-        stage('Preparar Entorno') {
-            steps {
-                sh 'pip install kaggle'
-            }
+
+    post {
+        success {
+            echo '✅ ¡Despliegue y procesamiento exitoso! Todo funciona perfecto.'
         }
-        
-        stage('Ingesta de Datos (Kaggle)') {
-            steps {
-                withCredentials([string(credentialsId: 'kaggle-token', variable: 'KAGGLE_API_TOKEN')]) {
-                    sh '''
-                    echo "Descargando dataset de US Accidents desde Kaggle..."
-                    mkdir -p data/raw
-                    kaggle datasets download -d sobhanmoosavi/us-accidents -p data/raw --unzip
-                    echo "¡Descarga exitosa!"
-                    '''
-                }
-            }
-        }
-        
-        // ¡NUEVA ETAPA! Aquí corre la magia de Dask
-        stage('Transformación y Carga (ETL)') {
-            steps {
-                sh '''
-                echo "Instalando librerías de Big Data..."
-                pip install -r requirements.txt
-                
-                echo "Ejecutando proceso ETL..."
-                python src/etl.py
-                '''
-            }
+        failure {
+            echo '❌ Error en el pipeline. Revisa los logs de Jenkins.'
         }
     }
 }

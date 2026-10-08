@@ -1,3 +1,7 @@
-dask[dataframe]
+flask
+pymongo
+dask
 pandas
-pymongo 
+pyspark==3.2.1
+pytest
+requests

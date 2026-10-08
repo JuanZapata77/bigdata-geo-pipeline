@@ -1,4 +1,4 @@
-services:
+﻿services:
   geo_mongo:
     image: mongo:6.0
     container_name: geo_mongo
@@ -60,23 +60,20 @@ services:
     restart: unless-stopped
 
   spark_master:
-    image: bitnami/spark:latest
+    image: bde2020/spark-master:3.2.1-hadoop3.2
     container_name: spark_master
-    environment:
-      - SPARK_MODE=master
     ports:
       - "7077:7077" 
       - "8082:8080" 
     restart: unless-stopped
 
   spark_worker:
-    image: bitnami/spark:latest
+    image: bde2020/spark-worker:3.2.1-hadoop3.2
     container_name: spark_worker
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark_master:7077
-      - SPARK_WORKER_MEMORY=2G
-      - SPARK_WORKER_CORES=2
+      - "SPARK_MASTER=spark://spark_master:7077"
+      - "SPARK_WORKER_CORES=2"
+      - "SPARK_WORKER_MEMORY=2G"
     depends_on:
       - spark_master
     restart: unless-stopped

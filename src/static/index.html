@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geo-Pipeline: Mapa de Accidentes</title>
+    <!-- Importamos los estilos de Leaflet para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        .panel {
+            position: absolute;
+            top: 20px;
+            left: 50px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 250px;
+        }
+        input, button { margin: 8px 0; padding: 10px; width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc;}
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 14px;}
+        button:hover { background-color: #218838; }
+        #status { font-size: 13px; color: #555; text-align: center; margin-top: 10px;}
+    </style>
+</head>
+<body>
+    <!-- Panel flotante de búsqueda -->
+    <div class="panel">
+        <h3 style="margin-top: 0;">🗺️ Geo-Búsqueda</h3>
+        <label>Latitud:</label>
+        <input type="number" id="lat" step="any" value="40.7812">
+        <label>Longitud:</label>
+        <input type="number" id="lng" step="any" value="-73.9665">
+        <label>Radio (metros):</label>
+        <input type="number" id="radio" value="5000">
+        <button onclick="buscarAccidentes()">🔍 Buscar Accidentes</button>
+        <div id="status">Ingresa coordenadas y busca.</div>
+    </div>
+
+    <!-- Contenedor del mapa -->
+    <div id="map"></div>
+
+    <!-- Importamos el motor de JavaScript de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Inicializar el mapa centrado en Nueva York
+        const map = L.map('map').setView([40.7812, -73.9665], 13);
+        
+        // 2. Cargar la capa de calles de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap - Geo-Pipeline Big Data'
+        }).addTo(map);
+
+        let marcadores = L.layerGroup().addTo(map);
+        let circuloRadio = null;
+
+        // 3. Función que se comunica con nuestra API de FastAPI
+        async function buscarAccidentes() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const radio = document.getElementById('radio').value;
+            const status = document.getElementById('status');
+
+            status.innerHTML = "<i>Buscando en la base de datos...</i>";
+            marcadores.clearLayers();
+            if (circuloRadio) map.removeLayer(circuloRadio);
+
+            try {
+                // Hacemos la petición a nuestra propia API
+                const response = await fetch(`/accidentes/cercanos?lat=${lat}&lng=${lng}&radio_metros=${radio}&limite=200`);
+                const data = await response.json();
+
+                if (data.datos && data.datos.length > 0) {
+                    status.innerHTML = `<b>✅ ${data.total_encontrados} accidentes encontrados</b>`;
+                    
+                    // Centrar el mapa en la nueva búsqueda
+                    map.setView([lat, lng], 13);
+
+                    // Dibujar el radio de búsqueda
+                    circuloRadio = L.circle([lat, lng], { radius: radio, color: '#007bff', fillOpacity: 0.1, weight: 2 }).addTo(map);
+
+                    // Dibujar cada accidente en el mapa
+                    data.datos.forEach(acc => {
+                        const coord = acc.location.coordinates; // [longitud, latitud]
+                        const marker = L.marker([coord[1], coord[0]]); // Leaflet usa [latitud, longitud]
+                        
+                        // Agregar un globo de información al hacer clic en el pin
+                        marker.bindPopup(`
+                            <div style="font-family: sans-serif;">
+                                <b>ID:</b> ${acc.id_accidente}<br>
+                                <b>Severidad:</b> Nivel ${acc.severidad}<br>
+                                <b>Fecha:</b> ${acc.fecha_inicio}<br>
+                                <b>Ciudad:</b> ${acc.ciudad}, ${acc.estado}
+                            </div>
+                        `);
+                        marcadores.addLayer(marker);
+                    });
+                } else {
+                    status.innerHTML = "⚠️ No hay accidentes registrados en esta zona.";
+                }
+            } catch (error) {
+                status.innerHTML = "❌ Error al conectar con la API.";
+                console.error(error);
+            }
+        }
+
+        // Hacer una búsqueda automática al abrir la página
+        buscarAccidentes();
+    </script>
+</body>
+</html>
