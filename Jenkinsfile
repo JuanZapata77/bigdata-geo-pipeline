@@ -10,8 +10,11 @@ pipeline {
 
        stage('Construir e Iniciar Infraestructura') {
             steps {
+                echo 'Limpiando contenedores de ejecuciones anteriores...'
+                sh 'docker-compose down --remove-orphans'
+                
                 echo 'Levantando los contenedores con Docker Compose...'
-                sh 'docker-compose up -d --build' 
+                sh 'docker-compose up -d --build'
             }
         }
 

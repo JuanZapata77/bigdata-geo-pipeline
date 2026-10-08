@@ -1,8 +1,16 @@
 FROM python:3.11-slim
+
+# Instalamos Java (requisito obligatorio para que PySpark funcione)
+RUN apt-get update && \
+    apt-get install -y default-jre && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-# Cambiamos fastapi por flask
-RUN pip install flask pymongo
+
+# Copiamos los requerimientos e instalamos todo
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiamos el código fuente y las pruebas
 COPY src/ /app/src/
-EXPOSE 8000
-# Comando para iniciar Flask
-CMD ["python", "src/api.py"]
+COPY tests/ /app/tests/
