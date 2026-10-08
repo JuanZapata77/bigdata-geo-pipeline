@@ -1,7 +1,8 @@
 import dask.dataframe as dd
-import pandas as pd
+import pandas as pd  # <- ¡Línea obligatoria agregada!
 from pymongo import MongoClient
 import os
+from dask.distributed import Client
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://geo_mongo:27017/")
 DB_NAME = "geo_db"
@@ -52,20 +53,32 @@ def procesar_y_cargar(df_partition):
     print(f"<- Bloque guardado exitosamente: {len(documentos)} documentos.", flush=True)
     return pd.Series([len(documentos)], dtype=int)
 
+
 if __name__ == "__main__":
-    print("1. Iniciando proceso ETL optimizado con Dask...", flush=True)
+    # ¡NUEVO!: Conexión explícita al clúster de Docker
+    print("1. Conectando al clúster distribuido de Dask...", flush=True)
+    client = Client("tcp://dask_scheduler:8786")
     
+    # Imprimimos la confirmación para los logs de Jenkins
+    workers = len(client.scheduler_info()['workers'])
+    print(f"¡Conectado exitosamente! Workers disponibles: {workers}", flush=True)
+    print("Monitorea el procesamiento en vivo en: http://localhost:8787", flush=True)
+    
+    print("2. Iniciando proceso ETL optimizado con Dask...", flush=True)
     ruta_archivo = "data/raw/*.csv"
     df = dd.read_csv(ruta_archivo, dtype=str, assume_missing=True)
     
-    print("2. Transformando datos a GeoJSON y cargando a MongoDB...", flush=True)
+    print("3. Transformando datos a GeoJSON y cargando a MongoDB...", flush=True)
     resultados = df.map_partitions(procesar_y_cargar, meta=pd.Series(dtype=int)).compute()
     
     total = resultados.sum()
-    print(f"\n3. ¡ETL Completado! Se insertaron {total} registros geoespaciales.", flush=True)
+    print(f"\n4. ¡ETL Completado! Se insertaron {total} registros geoespaciales.", flush=True)
     
-    print("4. Creando el índice '2dsphere'...", flush=True)
+    print("5. Creando el índice '2dsphere'...", flush=True)
     cliente = MongoClient(MONGO_URI)
     cliente[DB_NAME][COLLECTION_NAME].create_index([("location", "2dsphere")])
     cliente.close()
     print("¡Base de datos lista para soportar consultas espaciales rápidas!", flush=True)
+    
+    # Cerramos el cliente distribuido
+    client.close()
