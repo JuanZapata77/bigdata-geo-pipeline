@@ -1,24 +1,11 @@
-﻿services:
+﻿version: '3.8'
+
+services:
   geo_mongo:
-    image: mongo:6.0
+    image: mongo:latest
     container_name: geo_mongo
     ports:
       - "27017:27017"
-    restart: unless-stopped
-
-  jenkins:
-    build:
-      context: .
-      dockerfile: jenkins.Dockerfile
-    container_name: jenkins
-    user: root
-    privileged: true
-    ports:
-      - "8080:8080" 
-      - "50000:50000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - jenkins_home:/var/jenkins_home
     restart: unless-stopped
 
   geo_api:
@@ -27,11 +14,13 @@
       dockerfile: api.Dockerfile
     container_name: geo_api
     ports:
-      - "8000:8000" 
-    environment:
-      - MONGO_URI=mongodb://geo_mongo:27017/
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
     depends_on:
       - geo_mongo
+      - dask_scheduler
+      - spark_master
     restart: unless-stopped
 
   dask_scheduler:
@@ -39,14 +28,16 @@
     container_name: dask_scheduler
     command: dask-scheduler
     ports:
-      - "8786:8786" 
-      - "8787:8787" 
+      - "8786:8786"
+      - "8787:8787"
     restart: unless-stopped
 
   dask_worker_1:
     image: daskdev/dask:latest
     container_name: dask_worker_1
     command: dask-worker tcp://dask_scheduler:8786
+    volumes:
+      - ./data:/app/data
     depends_on:
       - dask_scheduler
     restart: unless-stopped
@@ -55,28 +46,38 @@
     image: daskdev/dask:latest
     container_name: dask_worker_2
     command: dask-worker tcp://dask_scheduler:8786
+    volumes:
+      - ./data:/app/data
     depends_on:
       - dask_scheduler
     restart: unless-stopped
 
   spark_master:
-    image: bde2020/spark-master:3.2.1-hadoop3.2
+    image: bitnami/spark:3.2.1
     container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     ports:
-      - "7077:7077" 
-      - "8082:8080" 
+      - "7077:7077"
+      - "8080:8080"
     restart: unless-stopped
 
   spark_worker:
-    image: bde2020/spark-worker:3.2.1-hadoop3.2
+    image: bitnami/spark:3.2.1
     container_name: spark_worker
     environment:
-      - "SPARK_MASTER=spark://spark_master:7077"
-      - "SPARK_WORKER_CORES=2"
-      - "SPARK_WORKER_MEMORY=2G"
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark_master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     depends_on:
       - spark_master
     restart: unless-stopped
-
-volumes:
-  jenkins_home:
