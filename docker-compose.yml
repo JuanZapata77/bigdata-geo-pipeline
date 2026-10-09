@@ -1,5 +1,3 @@
-﻿version: '3.8'
-
 services:
   geo_mongo:
     image: mongo:latest
@@ -53,7 +51,7 @@ services:
     restart: unless-stopped
 
   spark_master:
-    image: bitnami/spark:3.2.1
+    image: bitnami/spark:3.5
     container_name: spark_master
     environment:
       - SPARK_MODE=master
@@ -67,7 +65,7 @@ services:
     restart: unless-stopped
 
   spark_worker:
-    image: bitnami/spark:3.2.1
+    image: bitnami/spark:3.5
     container_name: spark_worker
     environment:
       - SPARK_MODE=worker

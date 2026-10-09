@@ -65,7 +65,7 @@ if __name__ == "__main__":
     print("Monitorea el procesamiento en vivo en: http://localhost:8787", flush=True)
     
     print("2. Iniciando proceso ETL optimizado con Dask...", flush=True)
-    ruta_archivo = "data/raw/*.csv"
+    ruta_archivo = "/app/data/raw/*.csv"
     df = dd.read_csv(ruta_archivo, dtype=str, assume_missing=True)
     
     print("3. Transformando datos a GeoJSON y cargando a MongoDB...", flush=True)
