@@ -15,7 +15,7 @@ pipeline {
                 
                 echo 'Levantando la infraestructura externa (ignorando a Jenkins)...'
                 // Listamos explícitamente los contenedores para no reiniciar a Jenkins
-                sh 'docker-compose up -d --build geo_mongo geo_api dask_scheduler dask_worker_1 dask_worker_2 spark_master spark_worker'
+                sh 'docker-compose up -d --build geo_mongo geo_api dask_scheduler dask_worker_1 dask_worker_2 spark-master spark-worker'
             }
         }
 
@@ -27,6 +27,15 @@ pipeline {
                 echo 'Ejecutando pruebas con Pytest dentro del contenedor de la API...'
                 // Si esta prueba falla, Jenkins cancelará el pipeline aquí mismo
                 sh 'docker exec geo_api pytest /app/tests/'
+            }
+        }
+
+        stage('Descarga de Datos (Kaggle)') {
+            steps {
+                echo 'Descargando dataset desde Kaggle de forma automática...'
+                withCredentials([usernamePassword(credentialsId: 'kaggle-credentials', usernameVariable: 'KAGGLE_USERNAME', passwordVariable: 'KAGGLE_KEY')]) {
+                    sh 'docker exec -e KAGGLE_USERNAME="${KAGGLE_USERNAME}" -e KAGGLE_KEY="${KAGGLE_KEY}" geo_api python /app/src/download_data.py'
+                }
             }
         }
 
