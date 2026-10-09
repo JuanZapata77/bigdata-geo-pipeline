@@ -25,6 +25,8 @@ services:
     image: daskdev/dask:latest
     container_name: dask_scheduler
     command: dask-scheduler
+    environment:
+      - EXTRA_PIP_PACKAGES=pymongo
     ports:
       - "8786:8786"
       - "8787:8787"
@@ -34,6 +36,8 @@ services:
     image: daskdev/dask:latest
     container_name: dask_worker_1
     command: dask-worker tcp://dask_scheduler:8786
+    environment:
+      - EXTRA_PIP_PACKAGES=pymongo
     volumes:
       - ./data:/app/data
     depends_on:
@@ -44,6 +48,8 @@ services:
     image: daskdev/dask:latest
     container_name: dask_worker_2
     command: dask-worker tcp://dask_scheduler:8786
+    environment:
+      - EXTRA_PIP_PACKAGES=pymongo
     volumes:
       - ./data:/app/data
     depends_on:
