@@ -11,7 +11,8 @@ pipeline {
        stage('Construir e Iniciar Infraestructura') {
             steps {
                 echo 'Limpiando contenedores de ejecuciones anteriores...'
-                sh 'docker-compose down --remove-orphans'
+                sh 'docker-compose down --remove-orphans || true'
+                sh 'docker rm -f geo_mongo geo_api dask_scheduler dask_worker_1 dask_worker_2 spark-master spark-worker || true'
                 
                 echo 'Levantando la infraestructura externa (ignorando a Jenkins)...'
                 // Listamos explícitamente los contenedores para no reiniciar a Jenkins
