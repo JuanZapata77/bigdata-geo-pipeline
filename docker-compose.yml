@@ -35,7 +35,7 @@
     restart: unless-stopped
 
   dask_scheduler:
-    image: daskdev/dask:2024.1.0-py3.11
+    image: daskdev/dask:latest
     container_name: dask_scheduler
     command: dask-scheduler
     ports:
@@ -44,7 +44,7 @@
     restart: unless-stopped
 
   dask_worker_1:
-    image: daskdev/dask:2024.1.0-py3.11
+    image: daskdev/dask:latest
     container_name: dask_worker_1
     command: dask-worker tcp://dask_scheduler:8786
     depends_on:
@@ -52,7 +52,7 @@
     restart: unless-stopped
 
   dask_worker_2:
-    image: daskdev/dask:2024.1.0-py3.11
+    image: daskdev/dask:latest
     container_name: dask_worker_2
     command: dask-worker tcp://dask_scheduler:8786
     depends_on:
