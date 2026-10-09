@@ -1,7 +1,7 @@
 flask
 pymongo
 dask[distributed]==2024.1.0
-pandas
+pandas==2.1.4
 pyspark==3.2.1
 pytest
 requests
