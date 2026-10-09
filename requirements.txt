@@ -1,6 +1,6 @@
 flask
 pymongo
-dask[distributed]
+dask[distributed]==2024.1.0
 pandas
 pyspark==3.2.1
 pytest
