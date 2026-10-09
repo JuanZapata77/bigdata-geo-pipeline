@@ -33,8 +33,8 @@ pipeline {
         stage('Descarga de Datos (Kaggle)') {
             steps {
                 echo 'Descargando dataset desde Kaggle de forma automática...'
-                withCredentials([usernamePassword(credentialsId: 'kaggle-credentials', usernameVariable: 'KAGGLE_USERNAME', passwordVariable: 'KAGGLE_KEY')]) {
-                    sh 'docker exec -e KAGGLE_USERNAME="${KAGGLE_USERNAME}" -e KAGGLE_KEY="${KAGGLE_KEY}" geo_api python /app/src/download_data.py'
+                withCredentials([string(credentialsId: 'kaggle-token', variable: 'KAGGLE_API_TOKEN')]) {
+                    sh 'docker exec -e KAGGLE_API_TOKEN="${KAGGLE_API_TOKEN}" -e KAGGLE_KEY="${KAGGLE_API_TOKEN}" geo_api python /app/src/download_data.py'
                 }
             }
         }

@@ -17,14 +17,19 @@ def descargar_dataset():
 
     print(f"📥 Iniciando descarga automática desde Kaggle: {DATASET_NAME}...", flush=True)
     
-    # 2. Autenticación con la API de Kaggle (usa KAGGLE_USERNAME y KAGGLE_KEY o ~/.kaggle/kaggle.json)
+    # 2. Autenticación con la API de Kaggle
+    token = os.getenv("KAGGLE_API_TOKEN") or os.getenv("KAGGLE_TOKEN") or os.getenv("KAGGLE_KEY")
+    if token:
+        os.environ["KAGGLE_API_TOKEN"] = token
+        os.environ["KAGGLE_KEY"] = token
+        
     try:
         api = KaggleApi()
         api.authenticate()
         print("🔐 Autenticación con Kaggle exitosa.", flush=True)
     except Exception as e:
         print(f"❌ Error al autenticar con la API de Kaggle: {e}", flush=True)
-        print("Asegúrate de que las credenciales KAGGLE_USERNAME y KAGGLE_KEY estén configuradas en Jenkins.", flush=True)
+        print("Asegúrate de que la credencial kaggle-token esté configurada en Jenkins.", flush=True)
         raise e
 
     # 3. Descarga y extracción automática
