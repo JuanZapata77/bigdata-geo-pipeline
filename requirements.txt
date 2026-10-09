@@ -2,7 +2,7 @@ flask
 pymongo
 dask[distributed]
 pandas
-pyspark>=3.2.1
+pyspark==3.5.0
 pytest
 requests
 pyarrow
