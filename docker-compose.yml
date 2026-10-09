@@ -18,7 +18,7 @@ services:
     depends_on:
       - geo_mongo
       - dask_scheduler
-      - spark_master
+      - spark-master
     restart: unless-stopped
 
   dask_scheduler:
@@ -50,9 +50,9 @@ services:
       - dask_scheduler
     restart: unless-stopped
 
-  spark_master:
+  spark-master:
     image: apache/spark:3.5.0
-    container_name: spark_master
+    container_name: spark-master
     environment:
       - SPARK_NO_DAEMONIZE=true
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
@@ -61,14 +61,14 @@ services:
       - "8081:8080"
     restart: unless-stopped
 
-  spark_worker:
+  spark-worker:
     image: apache/spark:3.5.0
-    container_name: spark_worker
+    container_name: spark-worker
     environment:
       - SPARK_NO_DAEMONIZE=true
       - SPARK_WORKER_MEMORY=2G
       - SPARK_WORKER_CORES=2
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark_master:7077
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     depends_on:
-      - spark_master
+      - spark-master
     restart: unless-stopped
