@@ -5,3 +5,4 @@ pandas
 pyspark==3.2.1
 pytest
 requests
+pyarrow
