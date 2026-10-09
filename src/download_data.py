@@ -4,7 +4,7 @@ import zipfile
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 DATA_RAW_DIR = os.getenv("DATA_RAW_DIR", "/app/data/raw")
-DATASET_NAME = os.getenv("KAGGLE_DATASET", "sobhanmoazemi/us-accidents")
+DATASET_NAME = os.getenv("KAGGLE_DATASET", "sobhanmoosavi/us-accidents")
 
 def descargar_dataset():
     os.makedirs(DATA_RAW_DIR, exist_ok=True)
