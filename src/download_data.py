@@ -1,17 +1,16 @@
 import os
 import glob
+import json
 import zipfile
-from kaggle.api.kaggle_api_extended import KaggleApi
 
 DATA_RAW_DIR = os.getenv("DATA_RAW_DIR", "/app/data/raw")
 DATASET_NAME = os.getenv("KAGGLE_DATASET", "sobhanmoosavi/us-accidents")
-# Límite de muestra: 1,200,000 registros para cumplir con la regla (> 1M) y no saturar disco/RAM
 SAMPLE_LIMIT = int(os.getenv("SAMPLE_LIMIT", "1200000"))
 
 def descargar_dataset():
     os.makedirs(DATA_RAW_DIR, exist_ok=True)
     
-    # 1. Comprobar si ya existe un CSV válido
+    # 1. Comprobar si ya existe un CSV válido ANTES de cargar la API de Kaggle
     archivos_csv = glob.glob(os.path.join(DATA_RAW_DIR, "*.csv"))
     if archivos_csv and os.path.getsize(archivos_csv[0]) > 5000000:
         tam_mb = os.path.getsize(archivos_csv[0]) / (1024 * 1024)
@@ -20,13 +19,28 @@ def descargar_dataset():
 
     print(f"📥 Iniciando descarga automática desde Kaggle: {DATASET_NAME}...", flush=True)
     
-    # 2. Autenticación con token
+    # 2. Configuración previa de credenciales para la librería kaggle
     token = os.getenv("KAGGLE_API_TOKEN") or os.getenv("KAGGLE_TOKEN") or os.getenv("KAGGLE_KEY")
+    username = os.getenv("KAGGLE_USERNAME", "kaggle_user")
+    
     if token:
-        os.environ["KAGGLE_API_TOKEN"] = token
         os.environ["KAGGLE_KEY"] = token
+        os.environ["KAGGLE_USERNAME"] = username
         
+        # Creamos también el archivo ~/.kaggle/kaggle.json y /root/.config/kaggle/kaggle.json por compatibilidad
+        for cfg_dir in ["/root/.kaggle", "/root/.config/kaggle", os.path.expanduser("~/.kaggle"), os.path.expanduser("~/.config/kaggle")]:
+            try:
+                os.makedirs(cfg_dir, exist_ok=True)
+                cfg_file = os.path.join(cfg_dir, "kaggle.json")
+                with open(cfg_file, "w") as f:
+                    json.dump({"username": username, "key": token}, f)
+                os.chmod(cfg_file, 0o600)
+            except Exception:
+                pass
+
+    # 3. Importar y autenticar Kaggle dinámicamente
     try:
+        from kaggle.api.kaggle_api_extended import KaggleApi
         api = KaggleApi()
         api.authenticate()
         print("🔐 Autenticación con Kaggle exitosa.", flush=True)
@@ -35,7 +49,7 @@ def descargar_dataset():
         print("Asegúrate de que la credencial kaggle-token esté configurada en Jenkins.", flush=True)
         raise e
 
-    # 3. Descarga como ZIP (sin descomprimir en el filesystem raíz de Docker)
+    # 4. Descarga como ZIP
     print(f"📦 Descargando archivo comprimido en {DATA_RAW_DIR}...", flush=True)
     api.dataset_download_files(DATASET_NAME, path=DATA_RAW_DIR, unzip=False)
     
@@ -46,7 +60,7 @@ def descargar_dataset():
     zip_path = archivos_zip[0]
     print(f"📂 Archivo ZIP descargado: {zip_path}. Extrayendo de forma optimizada...", flush=True)
     
-    # 4. Extracción en streaming directo al CSV (cumpliendo con la muestra autorizada de > 1M registros)
+    # 5. Extracción en streaming directo al CSV
     with zipfile.ZipFile(zip_path, 'r') as zf:
         csv_names = [f for f in zf.namelist() if f.endswith('.csv')]
         if not csv_names:
@@ -71,7 +85,7 @@ def descargar_dataset():
                 shutil.copyfileobj(src, dst)
                 print("✨ Archivo completo extraído exitosamente.", flush=True)
                 
-    # 5. Eliminamos el ZIP para recuperar espacio en disco inmediatamente
+    # 6. Eliminamos el ZIP para recuperar espacio
     try:
         os.remove(zip_path)
         print("🗑️ Archivo ZIP temporal eliminado para liberar espacio en disco.", flush=True)
