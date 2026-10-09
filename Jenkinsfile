@@ -13,8 +13,9 @@ pipeline {
                 echo 'Limpiando contenedores de ejecuciones anteriores...'
                 sh 'docker-compose down --remove-orphans'
                 
-                echo 'Levantando los contenedores con Docker Compose...'
-                sh 'docker-compose up -d --build'
+                echo 'Levantando la infraestructura externa (ignorando a Jenkins)...'
+                // Listamos explícitamente los contenedores para no reiniciar a Jenkins
+                sh 'docker-compose up -d --build geo_mongo geo_api dask_scheduler dask_worker_1 dask_worker_2 spark_master spark_worker'
             }
         }
 
